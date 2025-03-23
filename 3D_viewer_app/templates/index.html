@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>3D Image Viewer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f6fa;
+            padding: 40px;
+            text-align: center;
+        }
+
+        h2 {
+            color: #2f3640;
+        }
+
+        form {
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0px 0px 10px rgba(0,0,0,0.1);
+            display: inline-block;
+            margin-bottom: 30px;
+        }
+
+        input[type="file"],
+        select,
+        button {
+            margin: 10px;
+            padding: 10px;
+            font-size: 16px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+        }
+
+        button {
+            background-color: #0984e3;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #74b9ff;
+        }
+
+        .result-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+        }
+
+        .result-box {
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 0 8px rgba(0,0,0,0.1);
+            padding: 10px;
+            width: 400px;
+        }
+
+        .result-box img {
+            width: 100%;
+            border-radius: 6px;
+        }
+
+        .result-title {
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #2d3436;
+        }
+
+        .depth-info p {
+            margin: 5px 0;
+            font-size: 14px;
+            color: #636e72;
+        }
+
+        .viewer-button {
+            margin-top: 40px;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>3D Image Inference Pipeline</h2>
+
+    <form id="uploadForm" enctype="multipart/form-data">
+        <input type="file" name="image" accept="image/*" required />
+        <select name="model">
+            <option value="midas">MiDaS</option>
+        </select>
+        <button type="submit">Generate 3D View</button>
+    </form>
+
+    <div id="results" class="result-container"></div>
+
+    <div id="viewerBtn" class="viewer-button"></div>
+
+    <script>
+        // Get DOM references to important UI elements
+        /** @type {HTMLFormElement} */
+        const form = document.getElementById("uploadForm");
+    
+        /** @type {HTMLDivElement} */
+        const resultsDiv = document.getElementById("results");
+    
+        /** @type {HTMLDivElement} */
+        const viewerBtnDiv = document.getElementById("viewerBtn");
+    
+        /**
+         * Handles the image upload form submission event.
+         *
+         * This function sends the selected image and model type to the Flask backend
+         * via a POST request to `/generate-3d`. Once the response is received, it dynamically
+         * updates the DOM with:
+         * - Object detection result image
+         * - Segmentation mask
+         * - Depth map with calculated depth stats
+         * - Right-eye stereo image
+         * - A button linking to the WebXR stereo viewer
+         *
+         * @param {SubmitEvent} e - The form submission event.
+         * @returns {Promise<void>}
+         */
+        form.onsubmit = async (e) => {
+            e.preventDefault();
+    
+            // Show loading message and reset previous content
+            resultsDiv.innerHTML = "<p>Processing... Please wait.</p>";
+            viewerBtnDiv.innerHTML = "";
+    
+            // Prepare and send the image as form data
+            const formData = new FormData(form);
+            const response = await fetch("/generate-3d", {
+                method: "POST",
+                body: formData
+            });
+    
+            // Parse JSON response from backend
+            const data = await response.json();
+    
+            // Populate result images and depth statistics in the UI
+            resultsDiv.innerHTML = `
+                <div class="result-box">
+                    <div class="result-title">1. Object Detection (YOLOv8)</div>
+                    <img src="${data.detection}" alt="Detection Result">
+                </div>
+                <div class="result-box">
+                    <div class="result-title">2. Segmentation Mask (DeepLabV3)</div>
+                    <img src="${data.segmentation}" alt="Segmentation Result">
+                </div>
+                <div class="result-box">
+                    <div class="result-title">3. Depth Map (MiDaS)</div>
+                    <img src="${data.depth}" alt="Depth Map">
+                    <div class="depth-info">
+                        <p><strong>Center Depth:</strong> ${data.stats.center.toFixed(2)}</p>
+                        <p><strong>Average Depth:</strong> ${data.stats.average.toFixed(2)}</p>
+                        <p><strong>Top-left Region Avg:</strong> ${data.stats.region_top_left.toFixed(2)}</p>
+                    </div>
+                </div>
+                <div class="result-box">
+                    <div class="result-title">4. Right-eye Stereo View</div>
+                    <img src="${data.right}" alt="Right Eye View">
+                </div>
+            `;
+    
+            // Add the WebXR stereo viewer launch button
+            viewerBtnDiv.innerHTML = `
+                <a href="${data.stereo}" target="_blank">
+                    <button style="padding: 12px 20px; font-size: 16px;">👓 Open WebXR Stereo Viewer</button>
+                </a>
+            `;
+        };
+    </script>
+    
+
+</body>
+</html>

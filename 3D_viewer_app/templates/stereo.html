@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>WebXR Stereo View</title>
+  <style>
+    body { margin: 0; overflow: hidden; }
+    canvas { display: block; }
+  </style>
+</head>
+<body>
+  <script type="module">
+    // Import core Three.js and WebXR utilities
+    import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.module.js';
+    import { VRButton } from 'https://cdn.jsdelivr.net/npm/three@0.158.0/examples/jsm/webxr/VRButton.js';
+
+    /** @type {THREE.Scene} The main 3D scene container */
+    const scene = new THREE.Scene();
+
+    /**
+     * @type {THREE.PerspectiveCamera}
+     * Perspective camera for simulating a human eye's field of view.
+     */
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+
+    /**
+     * @type {THREE.WebGLRenderer}
+     * WebGL renderer with antialiasing and WebXR support.
+     */
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.xr.enabled = true;
+
+    // Append renderer canvas and VR button to DOM
+    document.body.appendChild(renderer.domElement);
+    document.body.appendChild(VRButton.createButton(renderer));
+
+    /**
+     * @type {THREE.PlaneGeometry}
+     * Plane geometry for displaying stereo textures.
+     */
+    const geometry = new THREE.PlaneGeometry(4, 2.25);  // 16:9 aspect ratio
+
+    /** @type {THREE.TextureLoader} */
+    const textureLoader = new THREE.TextureLoader();
+
+    /**
+     * Load the left-eye texture from Flask-rendered Jinja path.
+     * @type {THREE.Texture}
+     */
+    const leftTexture = textureLoader.load("{{ left }}");
+
+    /**
+     * Load the right-eye texture from Flask-rendered Jinja path.
+     * @type {THREE.Texture}
+     */
+    const rightTexture = textureLoader.load("{{ right }}");
+
+    /**
+     * @type {THREE.MeshBasicMaterial}
+     * Material for left eye with left texture.
+     */
+    const leftMaterial = new THREE.MeshBasicMaterial({ map: leftTexture });
+
+    /**
+     * @type {THREE.MeshBasicMaterial}
+     * Material for right eye with right texture.
+     */
+    const rightMaterial = new THREE.MeshBasicMaterial({ map: rightTexture });
+
+    /**
+     * @type {THREE.Mesh}
+     * Mesh representing the left eye's image plane.
+     */
+    const leftEye = new THREE.Mesh(geometry, leftMaterial);
+    leftEye.position.x = -2.2; // Shift left
+
+    /**
+     * @type {THREE.Mesh}
+     * Mesh representing the right eye's image plane.
+     */
+    const rightEye = new THREE.Mesh(geometry, rightMaterial);
+    rightEye.position.x = 2.2; // Shift right
+
+    // Add both eye views to the scene
+    scene.add(leftEye);
+    scene.add(rightEye);
+
+    // Move camera slightly backward to view the planes
+    camera.position.z = 5;
+
+    /**
+     * Starts the render loop with WebXR support.
+     * Called once at page load.
+     *
+     * @function animate
+     * @returns {void}
+     */
+    function animate() {
+      renderer.setAnimationLoop(() => {
+        renderer.render(scene, camera);
+      });
+    }
+
+    animate();
+  </script>
+</body>
+</html>
