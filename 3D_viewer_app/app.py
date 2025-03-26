@@ -90,9 +90,13 @@ def stereo_view(filename):
         left=f"/uploads/{filename}.png",
         right=f"/output/{filename}_right.jpg"
     )
+"""
+if __name__ == '__main__':
+    
+    Entry point for running the Flask app in debug mode.
+    
+    app.run(debug=True)
+"""
 
 if __name__ == '__main__':
-    """
-    Entry point for running the Flask app in debug mode.
-    """
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=5000)
